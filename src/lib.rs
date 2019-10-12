@@ -8,7 +8,7 @@ pub mod strmode {
             (0o004, 'r'), (0o002, 'w'), (0o001, 'x'), // other
         ];
 
-        // Set permission flags
+        // Permissions
         let s = &mut flags[1..];
         for i in 0..9 {
             if mode & perms[i].0 == perms[i].0 {
@@ -28,6 +28,8 @@ pub mod strmode {
             _           => { flags[0] = '?' },  // unknown
         }
 
+        // TODO setuid, setgid, sticky
+
         return flags.into_iter().collect();
     }
 
@@ -35,8 +37,15 @@ pub mod strmode {
     fn test_strmode() {
         let tests = [
             (0o100644, "-rw-r--r--"),
+            (0o100600, "-rw-------"),
+            (0o100777, "-rwxrwxrwx"),
             (0o040755, "drwxr-xr-x"),
             (0o040711, "drwx--x--x"),
+            (0o020660, "crw-rw----"),
+            (0o060660, "brw-rw----"),
+            (0o120777, "lrwxrwxrwx"),
+            (0o010600, "prw-------"),
+            (0o140755, "srwxr-xr-x"),
         ];
 
         for t in &tests {
