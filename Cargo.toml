@@ -1,6 +1,6 @@
 [package]
 name = "strmode"
-version = "0.1.0"
+version = "1.0.0"
 description = "strmode(3)"
 authors = ["colvin <39858617+colvin@users.noreply.github.com>"]
 license = "MIT"
