@@ -25,9 +25,9 @@ pub fn strmode(mode: u32) -> String {
     let mut flags = ['-'; 10];
 
     let perms = [
-        (0o400, 'r'), (0o200, 'w'), (0o100, 'x'), // user
-        (0o040, 'r'), (0o020, 'w'), (0o010, 'x'), // group
-        (0o004, 'r'), (0o002, 'w'), (0o001, 'x'), // other
+        (0o000400, 'r'), (0o000200, 'w'), (0o000100, 'x'), // user
+        (0o000040, 'r'), (0o000020, 'w'), (0o000010, 'x'), // group
+        (0o000004, 'r'), (0o000002, 'w'), (0o000001, 'x'), // other
     ];
 
     // Permissions
@@ -50,7 +50,29 @@ pub fn strmode(mode: u32) -> String {
         _           => { flags[0] = '?' },  // unknown
     }
 
-    // TODO setuid, setgid, sticky
+    // setuid
+    let xusr_setuid = mode & (0o000100 | 0o004000);
+    if xusr_setuid == 0o004000 {
+        flags[3] = 'S';
+    } else if xusr_setuid == (0o000100 | 0o004000) {
+         flags[3] = 's';
+    }
+
+    // setgid
+    let xgrp_setgid = mode & (0o000010 | 0o002000);
+    if xgrp_setgid == 0o002000 {
+        flags[6] = 'S';
+    } else if xgrp_setgid == (0o000010 | 0o002000) {
+        flags[6] = 's';
+    }
+
+    // sticky
+    let xoth_sticky = mode & (0o000001 | 0o001000);
+    if xoth_sticky == 0o001000 {
+        flags[9] = 'T';
+    } else if xoth_sticky == (0o000001 | 0o001000) {
+        flags[9] = 't';
+    }
 
     return flags.into_iter().collect();
 }
@@ -58,19 +80,36 @@ pub fn strmode(mode: u32) -> String {
 #[test]
 fn test_strmode() {
     let tests = [
-        (0o100644, "-rw-r--r--"),
-        (0o100600, "-rw-------"),
-        (0o100777, "-rwxrwxrwx"),
-        (0o040755, "drwxr-xr-x"),
-        (0o040711, "drwx--x--x"),
-        (0o020660, "crw-rw----"),
-        (0o060660, "brw-rw----"),
-        (0o120777, "lrwxrwxrwx"),
-        (0o010600, "prw-------"),
-        (0o140755, "srwxr-xr-x"),
+        (0o100644, "-rw-r--r--", "file, 644"),
+        (0o100600, "-rw-------", "file, 600"),
+        (0o100777, "-rwxrwxrwx", "file, 777"),
+        (0o040755, "drwxr-xr-x", "directory, 755"),
+        (0o040711, "drwx--x--x", "directory, 711"),
+        (0o020660, "crw-rw----", "character special, 660"),
+        (0o060660, "brw-rw----", "block special, 660"),
+        (0o120777, "lrwxrwxrwx", "symbolic link, 777"),
+        (0o010600, "prw-------", "fifo, 600"),
+        (0o140755, "srwxr-xr-x", "socket ,755"),
+        (0o104555, "-r-sr-xr-x", "file, 755 with setuid"),
+        (0o104644, "-rwSr--r--", "file, 644 with setuid"),
+        (0o044755, "drwsr-xr-x", "directory, 755 with setuid"),
+        (0o044666, "drwSrw-rw-", "directory, 666 with setuid"),
+        (0o102755, "-rwxr-sr-x", "file, 755 with setgid"),
+        (0o102644, "-rw-r-Sr--", "file, 644 with setgid"),
+        (0o042755, "drwxr-sr-x", "directory, 755 with setgid"),
+        (0o042644, "drw-r-Sr--", "directory, 644 with setgid"),
+        (0o041755, "drwxr-xr-t", "directory, 755 with sticky"),
+        (0o041644, "drw-r--r-T", "directory, 644 with sticky"),
+        (0o104471, "-r-Srwx--x", "file, 471 with setuid"),
+        (0o106471, "-r-Srws--x", "file, 471 with setuid and setgid"),
+        (0o044471, "dr-Srwx--x", "directory, 471 with setuid"),
+        (0o046471, "dr-Srws--x", "directory, 471 with setuid and setgid"),
+        (0o045471, "dr-Srwx--t", "directory, 471 with setuid and sticky"),
+        (0o047471, "dr-Srws--t", "directory, 471 with setuid, setgid, and sticky"),
+        (0o047470, "dr-Srws--T", "directory, 470 with setuid, setgid, and sticky"),
     ];
 
     for t in &tests {
-        assert_eq!(t.1, strmode(t.0));
+        assert_eq!(t.1, strmode(t.0), "{}: {:o}", t.2, t.0);
     }
 }
